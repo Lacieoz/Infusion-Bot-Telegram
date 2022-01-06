@@ -1,0 +1,4 @@
+node_modules/*
+config/.env
+files/simo.png
+files/excels_dati/*

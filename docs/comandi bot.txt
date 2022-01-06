@@ -1,0 +1,3 @@
+avvia_ricerca - ricerca per categoria
+avvia_ricerca_marca - ricerca per marca
+avvia_ricerca_principi_attivi - ricerca per principio attivo
