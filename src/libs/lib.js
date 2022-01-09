@@ -97,6 +97,7 @@ exports.askIfBio = async function (conInfo, reply, data, query) {
 
         reply.inlineKeyboard(inlineKeyboard).editText(query.message, 'Selezionare la tipologia di ' + vocabulary[type].singolare).then()
     } else {
+        data.h.push('X');
         this.showTisaneGallery(conInfo, reply, data, query, type)
     } 
 
@@ -122,7 +123,14 @@ exports.showTisaneGallery = async function (conInfo, reply, data, query) {
     querySql = this.addToQueryIsBio(querySql, isBio)
     let result = await libUtils.makeSqlCall(conInfo, querySql, [value])
     
-    let text = result[0].id + ' - ' + result[0].nome + ', ' + result[0].marca
+    let idTisana = result[0].id
+
+    let queryMean = queries["V"].mean
+    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [idTisana])
+
+    let text = idTisana + ' - ' + result[0].nome + ', ' + result[0].marca + "\n"
+    if (resultMeanVote[0].count > 0) 
+        text += "     Voto medio : " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)"
 
     reply.deleteMessage(query.message).then();
 
@@ -183,7 +191,14 @@ exports.changeTisaneGallery = async function (conInfo, reply, data, query) {
 
     data.h[3] = index
 
-    text += result[index].id + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
+    let idTisana = result[index].id
+
+    let queryMean = queries["V"].mean
+    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [idTisana])
+
+    text += idTisana + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
+    if (resultMeanVote[0].count > 0) 
+        text += "     Voto medio : " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)"
 
     reply.deleteMessage(query.message);
 
@@ -232,6 +247,11 @@ createX3inlineKeyboardNotEmpty = async function (data, result) {
     inlineKeyboard.push(
         [{ text: 'LISTA COMPLETA', callback_data: JSON.stringify(
             libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: 'L' })) }] //, d : idPhoto })) }]
+    )
+
+    inlineKeyboard.push(
+        [{ text: 'VOTA', callback_data: JSON.stringify(
+            libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: 'V0' })) }] //, d : idPhoto })) }]
     )
 
     var h = []
@@ -340,6 +360,12 @@ exports.searchById = async function (conInfo, reply, id) {
     if (result.isFreddaToo == 1) {
         text += '\nFREDDA - Può essere bevuta anche fredda\n'
     }
+
+    let queryMean = queries["V"].mean
+    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [result.id])
+
+    if (resultMeanVote[0].count > 0) 
+        text += "\nVOTO MEDIO - " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)\n"
 
     reply.text(text, "Markdown")
 

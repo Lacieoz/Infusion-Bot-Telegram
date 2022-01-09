@@ -4,6 +4,7 @@ const botgram = require("botgram")
 const fs = require("fs")
 const lib = require('./libs/lib');
 const libUtils = require('./libs/libUtils');
+const libVote = require('./libs/libVote');
 
 const bot = botgram(process.env.BOT_ID)
 var conInfo = {
@@ -53,7 +54,11 @@ bot.callback(async function (query, next) {
     // first, get the reply queue
     var reply = bot.reply(query.message.chat);
 
-    if (data.h.length > 0) {
+    if (data.a != null && data.a == 'V0')
+        libVote.askVote(conInfo, reply, data, query)
+    else if (data.a != null && data.a[0] == 'V')
+        libVote.voteInfuse(conInfo, reply, data, query)
+    else if (data.h.length > 0) {
         if (data.h.length == 1) { // PARAMETRO 1 : TIPOLOGIA DI RICERCA
             // PASSO X.1.B
             lib.restartSearch(conInfo, reply, data, query);

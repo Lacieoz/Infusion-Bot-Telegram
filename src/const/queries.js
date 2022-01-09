@@ -23,6 +23,10 @@ const queries = {
     }, "X": {
         "id": "SELECT * FROM Tisane WHERE id = ?",
         "base": "SELECT * FROM Tisane WHERE"
+    }, "V": {
+        "insert": "INSERT INTO Reviews (idTisana, nameUser, review, date) " +
+                "VALUES (?, ?, ?, ?);",
+        "mean": "SELECT avg(review) as mean, count(*) as count FROM Tisane.Reviews where idTisana = ?"
     }
 }
 
