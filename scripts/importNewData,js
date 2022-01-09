@@ -1,7 +1,8 @@
 const Excel = require('exceljs');
 const filename = 'C:\\Workspace\\BotTisane\\files\\excels_dati\\Tisane.xlsx'
 const fs = require('fs');
-const lib = require('C:\\Workspace\\BotTisane\\lib');
+const lib = require('C:\\Workspace\\BotTisane\\src\\libs\\lib');
+const libUtils = require('C:\\Workspace\\BotTisane\\src\\libs\\libUtils');
 var dateFormat = require('dateformat');
 
 let toClone = true
@@ -71,7 +72,7 @@ async function main() {
     
         let query = 'CREATE TABLE TisaneStorico_' + dateFormatString + ' SELECT * FROM Tisane;'
         console.log("Creazione tabella storico : TisaneStorico" + dateFormatString)
-        await lib.makeSqlCallNoPrint(conInfo, query, [])
+        await libUtils.makeSqlCallNoPrint(conInfo, query, [])
         console.log("Creazione tabella completata")
     }
     
@@ -79,7 +80,7 @@ async function main() {
     if (toDeleteData) {
         console.log("Eliminazione dati tabella Tisane")
         query = 'TRUNCATE TABLE Tisane;'
-        await lib.makeSqlCallNoPrint(conInfo, query, [])
+        await libUtils.makeSqlCallNoPrint(conInfo, query, [])
         console.log("Eliminazione dati completata")
     }
     
@@ -120,7 +121,7 @@ async function main() {
 
         console.log(query)
 
-        await lib.makeSqlCallNoPrint(conInfo, query, [])
+        await libUtils.makeSqlCallNoPrint(conInfo, query, [])
 
         console.log("Finito inserimento dati")
 

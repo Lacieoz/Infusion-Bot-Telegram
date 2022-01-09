@@ -1,175 +1,38 @@
-const mysql = require('mysql2/promise');
 const fs = require("fs");
 const { Message } = require('botgram/lib/model');
+
 const libUtils = require('./libUtils');
+
+const queriesFile = require("../const/queries.js");
+const queries = queriesFile["queries"];
+
+const vocabularyFile = require("../const/vocabulary.js");
+const vocabulary = vocabularyFile["vocabulary"];
 
 const types = {"C": "categoria", "M":"marca", "P":"principi_attivi"};
 
-const queries = {
-    "C": {
-        "start": "SELECT distinct categoria FROM Tisane",
-        "bio" : "SELECT * FROM IsBio WHERE categoria = ?",
-        "all": "SELECT * FROM Tisane WHERE categoria = ? ",
-        "freddo": "SELECT * FROM Tisane WHERE (categoria = ? or isFreddaToo = true)"
-    }, "M" : {
-        "start": "SELECT marca FROM Tisane GROUP BY marca HAVING count(*) > 1 order by marca",
-        "bio" : "SELECT * FROM IsBioMarche WHERE marca = ?",
-        "all": "SELECT * FROM Tisane WHERE marca = ? "
-    }, "P" : {
-        "start": "SELECT distinct(principi_attivi) FROM Tisane.Tisane where principi_attivi != '/' and principi_attivi != ''",
-        "bio": "SELECT * FROM IsBioPrinAtt WHERE principi_attivi = ?",
-        "all": "SELECT * FROM Tisane WHERE principi_attivi = ? "
-    }, "X": {
-        "id": "SELECT * FROM Tisane WHERE id = ?",
-        "base": "SELECT * FROM Tisane WHERE"
-    }
-}
-
-const vocabulary = {
-    "C": {
-        "singolare": "categoria",
-        "plurale": "categorie",
-        "genere": "a",
-        "articolo": "la",
-        "articoloPlurale": "le"
-    }, "M" : {
-        "singolare": "marca",
-        "plurale": "marche",
-        "genere": "a",
-        "articolo": "la",
-        "articoloPlurale": "le"
-    }, "P" : {
-        "singolare": "principio attivo",
-        "plurale": "principi attivi",
-        "genere": "o",
-        "articolo": "il",
-        "articoloPlurale": "i"
-    }
-}
-
-exports.makeSqlCall = async function (conInfo, query, params) {
-    
-    libUtils.writeLog("Query = " + query)
-
-    // create the connection
-    const connection = await mysql.createConnection(conInfo);
-    // query database
-    const [rows, fields] = await connection.execute(query, params);
-
-    return rows;
-}
-
-exports.makeSqlCallNoPrint = async function (conInfo, query, params) {
-    
-    // create the connection
-    const connection = await mysql.createConnection(conInfo);
-    // query database
-    const [rows, fields] = await connection.execute(query, params);
-
-    return rows;
-}
-
-// EX : msg = 'h=cat|S|1,c=2821834921,d=4324832'
-
-exports.fromMsgToJson = function (msgJson) {
-
-    var campiJson = msgJson.m.split(',');
-    let jsonParsed = {}
-    for (let campo of campiJson) {
-        let key = campo.split('=')[0];
-        let values = campo.split('=')[1].split('|');
-        if (key == 'h') {
-            if (values.length == 1 && values[0] == '') {
-                jsonParsed[key] = []    
-            } else {
-                jsonParsed[key] = values
-                if (jsonParsed[key].length > 3) {
-                    jsonParsed[key][3] = Number(jsonParsed[key][3])
-                }
-            }
-            
-        }
-        else if (key == 'c') { // chat id
-            jsonParsed[key] = Number(values[0])
-        }
-        else if (key == 'd') { // chat id
-            jsonParsed[key] = Number(values[0])
-        }
-        else {
-            jsonParsed[key] = values[0]
-        }
-    }
-
-    return jsonParsed;
-}
-
-exports.fromJsonToMsg = function (msgJson) {
-
-    let keys = Object.keys(msgJson);
-    let stringToReturn = {}
-    text = ''
-    for (let key of keys) {
-        text += key + '='
-        if (msgJson[key] instanceof Array) {
-            if (msgJson[key].length == 0) {
-                text += ','
-            } else {
-                for (let value of msgJson[key]) {
-                    text += value + '|' 
-                }
-                text = text.substring(0, text.length - 1);
-                text += ','
-            }
-        } else {
-            text += msgJson[key] + ','
-        }
-    }
-    text = text.substring(0, text.length - 1);
-    stringToReturn['m'] = text;
-
-    console.log(stringToReturn)
-
-    return stringToReturn;
-}
 
 exports.addToQueryIsBio = function (query, isBio) {
     
-    if (isBio == 'S') {
+    if (isBio == 'S')
         query += ' AND isBio = true'
-    } else if (isBio == 'N') {
+    else if (isBio == 'N')
         query += ' AND isBio = false'
-    } else if (isBio == 'I') {
-        // do nothing
-    } else if (isBio == 'X') {
-        // do nothing
-    }
 
     return query;
 }
 
 // PASSO X.1.A
 exports.startSearch = async function (conInfo, msg, reply, type) {
-    
-    let typeLong = types[type];
-
-    // search data
-    let query = queries[type].start
-    let result = await this.makeSqlCall(conInfo, query, [])
 
     // create inlineKeyboard
-    let inlineKeyboard = []
-    for (let row of result) {
-        let value = row[typeLong];
-        let msgJson = this.fromJsonToMsg({ h: [type, value], c: msg.chat.id })
-        inlineKeyboard.push([{ text: value, callback_data: JSON.stringify(msgJson) }])
-    }
+    let inlineKeyboard = await createX1inlineKeyboard(conInfo, type, msg.chat.id)
 
     // invio messaggio
-    if (result.length == 0)
+    if (inlineKeyboard.length == 0)
         reply.text('Non sono presenti ' + vocabulary[type].plurale)
-    else {
-        reply.inlineKeyboard(inlineKeyboard).text('Ecco ' + vocabulary[type].articoloPlurale + ' ' + vocabulary[type].plurale + ', si prega di sceglierne una')
-    }
+    else
+        reply.inlineKeyboard(inlineKeyboard).text('Ecco ' + vocabulary[type].articoloPlurale + ' ' + vocabulary[type].plurale + ', si prega di sceglierne un' + vocabulary[type].genere)
     
 }
 
@@ -177,29 +40,35 @@ exports.startSearch = async function (conInfo, msg, reply, type) {
 exports.restartSearch = async function (conInfo, reply, data, query) {
     
     let type = data.h[0]
+
+    // create inlineKeyboard
+    let inlineKeyboard = await createX1inlineKeyboard(conInfo, type, data.c)
+
+    // invio messaggio
+    if (inlineKeyboard.length == 0)
+        reply.text('Non sono presenti ' + vocabulary[type].plurale).then()
+    else
+        reply.inlineKeyboard(inlineKeyboard).editText(query.message, 
+            'Ecco ' + vocabulary[type].articoloPlurale + ' ' + vocabulary[type].plurale + ', si prega di sceglierne un' + vocabulary[type].genere).then()
+    query.answer()
+
+}
+
+createX1inlineKeyboard = async function (conInfo, type, chatId) {
     let typeLong = types[type];
 
     // search data
     let querySql = queries[type].start
-    let result = await this.makeSqlCall(conInfo, querySql, [])
+    let result = await libUtils.makeSqlCall(conInfo, querySql, [])
 
     // create inlineKeyboard
     let inlineKeyboard = []
     for (let row of result) {
         let value = row[typeLong];
-        let msgJson = this.fromJsonToMsg({ h: [type, value], c: data.c })
+        let msgJson = libUtils.fromJsonToMsg({ h: [type, value], c: chatId })
         inlineKeyboard.push([{ text: value, callback_data: JSON.stringify(msgJson) }])
     }
-    
-    // invio messaggio
-    if (result.length == 0)
-        reply.text('Non sono presenti ' + vocabulary[type].plurale).then()
-    else {
-        reply.inlineKeyboard(inlineKeyboard).editText(query.message, 
-            'Ecco ' + vocabulary[type].articoloPlurale + ' ' + vocabulary[type].plurale + ', si prega di sceglierne un' + vocabulary[type].genere).then()
-    }
-    query.answer()
-
+    return inlineKeyboard;
 }
 
 // PASSO X.2
@@ -210,20 +79,20 @@ exports.askIfBio = async function (conInfo, reply, data, query) {
     let typeLong = types[type];
 
     let querySql = queries[type].bio 
-    let result = await this.makeSqlCall(conInfo, querySql, [value])
+    let result = await libUtils.makeSqlCall(conInfo, querySql, [value])
 
     let inlineKeyboard = []
 
     if (result.length != 0) {
         inlineKeyboard = [
             [{ text: 'BIO', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, 'S'], c: data.c })) }],
+                libUtils.fromJsonToMsg({ h: [type, value, 'S'], c: data.c })) }],
             [{ text: 'NON BIO', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, 'N'], c: data.c })) }],
+                libUtils.fromJsonToMsg({ h: [type, value, 'N'], c: data.c })) }],
             [{ text: 'Indifferente', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, 'I'], c: data.c })) }],
+                libUtils.fromJsonToMsg({ h: [type, value, 'I'], c: data.c })) }],
             [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type], c: data.c })) }]
+                libUtils.fromJsonToMsg({ h: [type], c: data.c })) }]
         ]
 
         reply.inlineKeyboard(inlineKeyboard).editText(query.message, 'Selezionare la tipologia di ' + vocabulary[type].singolare).then()
@@ -238,6 +107,8 @@ exports.askIfBio = async function (conInfo, reply, data, query) {
 exports.showTisaneGallery = async function (conInfo, reply, data, query) {
     let type = data.h[0]
     let value = data.h[1]
+    // insert index photo
+    data.h.push(0);
     let typeLong = types[type];
 
     let isBio = 'X'
@@ -249,67 +120,25 @@ exports.showTisaneGallery = async function (conInfo, reply, data, query) {
         querySql = queries[type].freddo
 
     querySql = this.addToQueryIsBio(querySql, isBio)
-    let result = await this.makeSqlCall(conInfo, querySql, [value])
+    let result = await libUtils.makeSqlCall(conInfo, querySql, [value])
     
-    let text = ''
+    let text = result[0].id + ' - ' + result[0].nome + ', ' + result[0].marca
+
+    reply.deleteMessage(query.message).then();
 
     let inlineKeyboard = []
 
     if (result.length != 0) {
         
-        text += result[0].id + ' - ' + result[0].nome + ', ' + result[0].marca
+        await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[0].id + ".jpg")).then()
 
-        reply.deleteMessage(query.message).then();
-        let idPhoto = (await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[0].id + ".jpg")).then()).id
-
-        function byteCount(s) {
-            return encodeURI(s).split(/%..|./).length - 1;
-        }
-
-        inlineKeyboard = [
-            [
-                { text: '<', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type, value, isBio, 0], c: data.c, a: '<' })) }, //, d : idPhoto })) },
-                { text: "1 / " + result.length, callback_data: '{prova : "prova"}' },
-                { text: '>', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type, value, isBio, 0], c: data.c, a: '>' })) } //, d : idPhoto })) }
-            ]
-        ]
-
-
-        // PER MOSTRARE TUTTE LE TISANE COME LISTA
-        inlineKeyboard.push(
-            [{ text: 'LISTA COMPLETA', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, isBio, 0], c: data.c, a: 'L' })) }] // , d : idPhoto })) }]
-        )
-
-        if (isBio != 'X') { 
-            inlineKeyboard.push(
-                    [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                        this.fromJsonToMsg({ h: [type, value], c: data.c })) }]
-                )
-        } else { // is Bio non presente
-            inlineKeyboard.push(
-                [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type], c: data.c })) }]
-            )
-        }
+        inlineKeyboard = await createX3inlineKeyboardNotEmpty(data, result);
 
         reply.text(text)
         reply.inlineKeyboard(inlineKeyboard).text('Catalogo ' + value).then()
     } else {
 
-        if (isBio != 'X') { 
-            inlineKeyboard.push(
-                    [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                        this.fromJsonToMsg({ h: [type, value], c: data.c })) }] //, d: idPhoto})) }]
-                )
-        } else { // is Bio non presente
-            inlineKeyboard.push(
-                [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type], c: data.c })) }] // , d: idPhoto })) }]
-            )
-        }
+        inlineKeyboard = await createX3inlineKeyboardEmpty(data);
 
         reply.inlineKeyboard(inlineKeyboard).editText(query.message, "Non sono presenti risultati per la tipologia scelta").then()
     }
@@ -330,85 +159,111 @@ exports.changeTisaneGallery = async function (conInfo, reply, data, query) {
         querySql = queries[type].freddo
     
     querySql = this.addToQueryIsBio(querySql, isBio)
-    let result = await this.makeSqlCall(conInfo, querySql, [value])
+    let result = await libUtils.makeSqlCall(conInfo, querySql, [value])
     
     let text = ''
+
+    // TODO : calcolo indice
 
     if (data.a == '<') {
         index = index - 1
         if (index < 0) 
             index = result.length - 1
-        text += result[index].id + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
     } else if (data.a == '>') {
         index = index + 1
 
         if (index > result.length - 1) 
             index = 0
-        text += result[index].id + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
     } else if (data.a == 'L') {
         
         await this.showListTisane(conInfo, reply, data, query, result, type)
 
         return
-    } else {
-        text += result[index].id + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
     }
+
+    data.h[3] = index
+
+    text += result[index].id + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
+
+    reply.deleteMessage(query.message);
 
     let inlineKeyboard = []
 
     if (result.length != 0) {
-        
-        reply.deleteMessage(query.message);
     
-        let idPhoto = (await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[index].id + ".jpg")).then()).id
+        // show photo of choosed infusion
+        await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[index].id + ".jpg")).then()
 
-        let indexFoto = index + 1 // per mostrare
-        inlineKeyboard = [
-            [
-                { text: '<', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type, value, isBio, index], c: data.chatId, a: '<' })) }, //, d: idPhoto })) },
-                { text: indexFoto + " / " + result.length, callback_data: '{prova : "prova"}' },
-                { text: '>', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type, value, isBio, index], c: data.chatId, a: '>' })) } //, d: idPhoto })) }
-            ]
-        ]
-
-        // PER MOSTRARE TUTTE LE TISANE COME LISTA
-        inlineKeyboard.push(
-            [{ text: 'LISTA COMPLETA', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: 'L' })) }] //, d : idPhoto })) }]
-        )
-
-        if (isBio != 'X') { 
-            inlineKeyboard.push(
-                    [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                        this.fromJsonToMsg({ h: [type, value], c: data.c })) }]// , d: idPhoto})) }]
-                )
-        } else { // is Bio non presente
-            inlineKeyboard.push(
-                [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type], c: data.c, d: idPhoto })) }]
-            )
-        }
+        inlineKeyboard = await createX3inlineKeyboardNotEmpty(data, result)
 
         reply.text(text)
         reply.inlineKeyboard(inlineKeyboard).text('Catalogo ' + value).then()
     } else {
-        if (isBio != 'X') { 
-            inlineKeyboard.push(
-                    [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                        this.fromJsonToMsg({ h: [type, value], c: data.c })) }] // , d: idPhoto})) }]
-                )
-        } else { // is Bio non presente
-            inlineKeyboard.push(
-                [{ text: 'INDIETRO', callback_data: JSON.stringify(
-                    this.fromJsonToMsg({ h: [type], c: data.c })) }] // , d: idPhoto })) }]
-            )
-        }
+       
+        inlineKeyboard = await createX3inlineKeyboardEmpty(data);
+
         reply.inlineKeyboard(inlineKeyboard).editText(query.message, "Non sono presenti risultati per la tipologia scelta").then()
     }
 
     query.answer()
+}
+
+createX3inlineKeyboardNotEmpty = async function (data, result) {
+    
+    let type = data.h[0]
+    let value = data.h[1]
+    let isBio = data.h[2]
+    let index = data.h[3]
+
+    let inlineKeyboard = []
+
+    let indexFoto = index + 1 // per mostrare
+    inlineKeyboard = [
+        [
+            { text: '<', callback_data: JSON.stringify(
+                libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: '<' })) }, //, d: idPhoto })) },
+            { text: indexFoto + " / " + result.length, callback_data: '{prova : "prova"}' },
+            { text: '>', callback_data: JSON.stringify(
+                libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: '>' })) } //, d: idPhoto })) }
+        ]
+    ]
+
+    // YO SHOW ALL INFUSIONS AS LIST
+    inlineKeyboard.push(
+        [{ text: 'LISTA COMPLETA', callback_data: JSON.stringify(
+            libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c, a: 'L' })) }] //, d : idPhoto })) }]
+    )
+
+    var h = []
+    if (isBio != 'X') 
+        h = [type, value]
+    else // if infusion isn't Bio
+        h = [type]
+    
+    inlineKeyboard.push(
+        [{ text: 'INDIETRO', callback_data: JSON.stringify(
+            libUtils.fromJsonToMsg({ h: h, c: data.c })) }]// , d: idPhoto})) }]
+    )
+
+    return inlineKeyboard;
+}
+
+createX3inlineKeyboardEmpty = async function (data) {
+
+    let inlineKeyboard = []
+    
+    var h = []
+    if (isBio != 'X')
+        h = [type, value]
+    else // is Bio non presente
+        h = [type]
+    
+    inlineKeyboard.push(
+        [{ text: 'INDIETRO', callback_data: JSON.stringify(
+            libUtils.fromJsonToMsg({ h: h, c: data.c })) }]
+    )
+
+    return inlineKeyboard;
 }
 
 exports.showListTisane = async function (conInfo, reply, data, query, result) {
@@ -432,7 +287,7 @@ exports.showListTisane = async function (conInfo, reply, data, query, result) {
         // PER MOSTRARE TUTTE LE TISANE COME LISTA
         inlineKeyboard.push(
             [{ text: 'RITORNA A GALLERIA TISANE', callback_data: JSON.stringify(
-                this.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c })) }]
+                libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c })) }]
         )
 
         text += "ID - MARCA - NOME\n"
@@ -458,7 +313,7 @@ exports.showListTisane = async function (conInfo, reply, data, query, result) {
 exports.searchById = async function (conInfo, reply, id) {
     // search data
     let query = queries['X'].id
-    let result = await this.makeSqlCall(conInfo, query, [id])
+    let result = await libUtils.makeSqlCall(conInfo, query, [id])
     
     if (result.length == 0) {
         reply.text('Non è presente l\'id : ' + id)
@@ -516,7 +371,7 @@ exports.searchByIngredient = async function (conInfo, reply, ingredients) {
         query = query.substring(0, query.length - 3); // remove last OR
     }
     
-    let result = await this.makeSqlCall(conInfo, query, [])
+    let result = await libUtils.makeSqlCall(conInfo, query, [])
     
     if (result.length == 0) {
         reply.text('Non sono presenti infusi con le parole ricercate')
@@ -535,7 +390,7 @@ exports.searchByIngredient = async function (conInfo, reply, ingredients) {
             let textOriginal = text
             let numSpaces = maxLength - row.id.toString().length
             let newText = "/" + row.id
-            newText += " ".repeat(numSpaces * 2) // per 2 perchè lo "spazio" prende metà dello ... spazio , pun not intended
+            newText += " ".repeat(numSpaces * 2) // multiply by 2 because "space" takes only half ... space , pun not intended
             newText += " - " + row.marca + " - " + row.nome + "\n"
             if ((new TextEncoder().encode(textOriginal + newText)).length < 4096) {
                 text = textOriginal + newText

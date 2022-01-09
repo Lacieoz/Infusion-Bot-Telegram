@@ -48,7 +48,7 @@ bot.callback(async function (query, next) {
     console.log("Ricevuta callback : ")
     console.log(data)
 
-    data = lib.fromMsgToJson(data)
+    data = libUtils.fromMsgToJson(data)
 
     // first, get the reply queue
     var reply = bot.reply(query.message.chat);
