@@ -69,3 +69,11 @@ exports.askVote = async function (conInfo, reply, data, query) {
 
     query.answer()
 }
+
+exports.textMean = async function (conInfo, idTisana) {
+
+    let queryMean = queries["V"].mean
+    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [idTisana])
+
+    return resultMeanVote;
+}

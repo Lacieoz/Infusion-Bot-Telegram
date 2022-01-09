@@ -90,6 +90,7 @@ exports.makeSqlCall = async function (conInfo, query, params) {
     // query database
     const [rows, fields] = await connection.execute(query, params);
 
+    await connection.end();
     return rows;
 }
 
@@ -101,4 +102,19 @@ exports.makeSqlCallNoPrint = async function (conInfo, query, params) {
     const [rows, fields] = await connection.execute(query, params);
 
     return rows;
+}
+
+exports.calculateNewIndex = function (data, index, result) {
+    if (data.a == '<') {
+        index = index - 1
+        if (index < 0) 
+            index = result.length - 1
+    } else if (data.a == '>') {
+        index = index + 1
+
+        if (index > result.length - 1) 
+            index = 0
+    }
+
+    return index;
 }

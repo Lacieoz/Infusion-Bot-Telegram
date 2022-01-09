@@ -2,7 +2,7 @@ const fs = require("fs");
 const { Message } = require('botgram/lib/model');
 
 const libUtils = require('./libUtils');
-
+const libVote = require('./libVote'); 
 const queriesFile = require("../const/queries.js");
 const queries = queriesFile["queries"];
 
@@ -124,21 +124,19 @@ exports.showTisaneGallery = async function (conInfo, reply, data, query) {
     let result = await libUtils.makeSqlCall(conInfo, querySql, [value])
     
     let idTisana = result[0].id
-
-    let queryMean = queries["V"].mean
-    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [idTisana])
+    let resultMeanVote = await libVote.textMean(conInfo, idTisana);
 
     let text = idTisana + ' - ' + result[0].nome + ', ' + result[0].marca + "\n"
     if (resultMeanVote[0].count > 0) 
         text += "     Voto medio : " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)"
-
+    
     reply.deleteMessage(query.message).then();
 
     let inlineKeyboard = []
 
     if (result.length != 0) {
         
-        await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[0].id + ".jpg")).then()
+        reply.photo(fs.createReadStream("../files/foto_tisane/" + result[0].id + ".jpg")).then()
 
         inlineKeyboard = await createX3inlineKeyboardNotEmpty(data, result);
 
@@ -173,28 +171,20 @@ exports.changeTisaneGallery = async function (conInfo, reply, data, query) {
 
     // TODO : calcolo indice
 
-    if (data.a == '<') {
-        index = index - 1
-        if (index < 0) 
-            index = result.length - 1
-    } else if (data.a == '>') {
-        index = index + 1
-
-        if (index > result.length - 1) 
-            index = 0
-    } else if (data.a == 'L') {
+    
+    if (data.a != 'L')
+        index = libUtils.calculateNewIndex(data, index, result)
+    
+    else if (data.a == 'L') {
         
         await this.showListTisane(conInfo, reply, data, query, result, type)
-
         return
     }
 
     data.h[3] = index
 
     let idTisana = result[index].id
-
-    let queryMean = queries["V"].mean
-    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [idTisana])
+    let resultMeanVote = await libVote.textMean(conInfo, idTisana);
 
     text += idTisana + ' - ' + result[index].nome + ', ' + result[index].marca + "\n"
     if (resultMeanVote[0].count > 0) 
@@ -207,7 +197,7 @@ exports.changeTisaneGallery = async function (conInfo, reply, data, query) {
     if (result.length != 0) {
     
         // show photo of choosed infusion
-        await reply.photo(fs.createReadStream("../files/foto_tisane/" + result[index].id + ".jpg")).then()
+        reply.photo(fs.createReadStream("../files/foto_tisane/" + result[index].id + ".jpg")).then()
 
         inlineKeyboard = await createX3inlineKeyboardNotEmpty(data, result)
 
@@ -343,9 +333,11 @@ exports.searchById = async function (conInfo, reply, id) {
     result = result[0]
 
     // MANDO FOTO
-    await reply.photo(fs.createReadStream("../files/foto_tisane/" + result.id + ".jpg")).then()
+    reply.photo(fs.createReadStream("../files/foto_tisane/" + result.id + ".jpg")).then()
 
-    let text = result.id + " - " + result.categoria + '\n'
+    let idTisana = result.id;
+
+    let text = idTisana + " - " + result.categoria + '\n'
     text += result.marca + " - " + result.nome + '\n'
     
     if (result.descrizione != '')
@@ -361,8 +353,7 @@ exports.searchById = async function (conInfo, reply, id) {
         text += '\nFREDDA - Può essere bevuta anche fredda\n'
     }
 
-    let queryMean = queries["V"].mean
-    let resultMeanVote = await libUtils.makeSqlCall(conInfo, queryMean, [result.id])
+    let resultMeanVote = await libVote.textMean(conInfo, idTisana);
 
     if (resultMeanVote[0].count > 0) 
         text += "\nVOTO MEDIO - " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)\n"
