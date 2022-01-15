@@ -7,12 +7,32 @@
         {
             "type": "pwa-node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Launch Bot",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "program": "index.js",
             "cwd": "${workspaceFolder}\\src\\"
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Launch Script Update Data",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "importNewData.js",
+            "cwd": "${workspaceFolder}\\src\\scripts\\updateData\\"
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Launch Script Prepare Photos",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "reduceQualityImages.js",
+            "cwd": "${workspaceFolder}\\src\\scripts\\preparePhotos\\"
         }
     ]
 }

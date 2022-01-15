@@ -2,8 +2,8 @@
 const Jimp = require('jimp');
 var fs = require('fs');
 
-let inputPath = 'C:\\Workspace\\BotTisane\\files\\reduceQualityInput\\'
-let outputPath = 'C:\\Workspace\\BotTisane\\files\\reduceQualityOutput\\' 
+let inputPath = 'files\\reduceQualityInput\\'
+let outputPath = 'files\\reduceQualityOutput\\' 
 
 /**
  * Resize + optimize images.
@@ -24,7 +24,7 @@ async function changeQualityImage(imagesPath, quality) {
 		let imgPathOutput = splitted[0] + ".jpg"
 		
 		await image.writeAsync(outputPath + imgPathOutput);
-		console.log("scritta immagine " + imgPathOutput)
+		console.log("wrote image " + imgPathOutput)
 	}
 	
 };

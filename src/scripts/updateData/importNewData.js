@@ -1,12 +1,18 @@
 const Excel = require('exceljs');
-const filename = 'C:\\Workspace\\BotTisane\\files\\excels_dati\\Tisane.xlsx'
 const fs = require('fs');
-const lib = require('C:\\Workspace\\BotTisane\\src\\libs\\lib');
-const libUtils = require('C:\\Workspace\\BotTisane\\src\\libs\\libUtils');
-var dateFormat = require('dateformat');
+const dateFormat = require('dateformat');
 
-let toClone = true
+// file with data to import
+const filename = 'files\\Tisane.xlsx'
+
+const lib = require('../../libs/lib');
+const libUtils = require('../../libs/libUtils');
+
+// create a backup
+let toBackup = true
+// delete data in main table
 let toDeleteData = true
+// insert new data in main table
 let toInsertData = true
 
 var conInfo = {
@@ -65,7 +71,7 @@ function cleanBooleanValues(data, nRows, booleanColumns) {
 async function main() {
 
     // CREATE STORICO TABLE
-    if (toClone) {
+    if (toBackup) {
         var now = new Date();
         let dateFormatString = dateFormat(now, "yyyy_dd_mm__hh_MM_ss")
     
