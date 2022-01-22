@@ -56,8 +56,13 @@ bot.callback(async function (query, next) {
 
     if (data.a != null && data.a == 'V0')
         libVote.askVote(conInfo, reply, data, query)
-    else if (data.a != null && data.a[0] == 'V')
-        libVote.voteInfuse(conInfo, reply, data, query)
+    else if (data.a != null && data.a[0] == 'V') {
+        // if vote done from direct search of id
+        if (data.id != null) 
+            libVote.voteInfuseWithId(conInfo, reply, data, query)
+        else
+            libVote.voteInfuse(conInfo, reply, data, query)
+    }
     else if (data.h.length > 0) {
         if (data.h.length == 1) { // PARAMETRO 1 : TIPOLOGIA DI RICERCA
             // PASSO X.1.B
@@ -81,14 +86,14 @@ bot.callback(async function (query, next) {
 bot.text(true, function (msg, reply, next) {
     if (msg.text.substring(0, 1) == '/' && libUtils.isNumeric(msg.text.substring(1))) {
         let id = msg.text.substring(1)
-        lib.searchById(conInfo, reply, id)
+        lib.searchById(conInfo, reply, id, msg.chat.id)
     }
     else if (libUtils.isNumeric(msg.text.replace(/\s/g, ''))) {
         if (fs.existsSync("../files/foto_tisane/" + msg.text + ".jpg")) {
             let id = msg.text
-            lib.searchById(conInfo, reply, id)
+            lib.searchById(conInfo, reply, id, msg.chat.id)
         } else {
-            reply.text("Qui mostro la foto della tisana")
+            reply.text("Image not found")
         }
     } else {
         lib.searchByIngredient(conInfo, reply, msg.text);

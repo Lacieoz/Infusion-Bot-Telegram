@@ -320,45 +320,26 @@ exports.showListTisane = async function (conInfo, reply, data, query, result) {
     query.answer()
 }
 
-exports.searchById = async function (conInfo, reply, id) {
-    // search data
-    let query = queries['X'].id
-    let result = await libUtils.makeSqlCall(conInfo, query, [id])
+exports.searchById = async function (conInfo, reply, id, chatId) {
     
-    if (result.length == 0) {
+    let text = await libUtils.createTextById(conInfo, id);
+
+    if (text == '') {
         reply.text('Non è presente l\'id : ' + id)
         return
     }
-
-    result = result[0]
-
     // MANDO FOTO
-    reply.photo(fs.createReadStream("../files/foto_tisane/" + result.id + ".jpg")).then()
+    reply.photo(fs.createReadStream("../files/foto_tisane/" + id + ".jpg")).then()
 
-    let idTisana = result.id;
+    // creare possibilità di votare
+    let inlineKeyboard = []
 
-    let text = idTisana + " - " + result.categoria + '\n'
-    text += result.marca + " - " + result.nome + '\n'
-    
-    if (result.descrizione != '')
-        text += '\nDESCRIZIONE\n' + result.descrizione + '\n'
-    if (result.ingredienti != '')
-        text += '\nINGREDIENTI\n' + result.ingredienti + '\n'
-    if (result.isBio == 1) {
-        text += '\nBIO - Sì\n'
-    } else {
-        text += '\nBIO - No\n'
-    }
-    if (result.isFreddaToo == 1) {
-        text += '\nFREDDA - Può essere bevuta anche fredda\n'
-    }
+    inlineKeyboard.push(
+        [{ text: 'VOTA', callback_data: JSON.stringify(
+            libUtils.fromJsonToMsg({c: chatId, a: 'V0', id: id})) }]
+    )
 
-    let resultMeanVote = await libVote.textMean(conInfo, idTisana);
-
-    if (resultMeanVote[0].count > 0) 
-        text += "\nVOTO MEDIO - " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)\n"
-
-    reply.text(text, "Markdown")
+    reply.inlineKeyboard(inlineKeyboard).text(text, "Markdown").then()
 
 }
 

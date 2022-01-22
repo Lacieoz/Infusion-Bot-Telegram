@@ -44,6 +44,29 @@ exports.voteInfuse = async function (conInfo, reply, data, query) {
     query.answer()
 }
 
+exports.voteInfuseWithId = async function (conInfo, reply, data, query) {
+    
+    let vote = data.a[1]
+    let idTisana = data.id
+
+    // save vote
+    let queryInsert = queries["V"].insert
+    let dateNow = new Date();
+
+    let params = [idTisana, query.from.username, vote, dateNow]
+
+    let resultInsert = await libUtils.makeSqlCall(conInfo, queryInsert, params)
+
+    reply.editText(query.message, 'Voto inserito con successo!').then()
+
+    let text = await libUtils.createTextById(conInfo,idTisana);
+
+    reply.text(text, "Markdown").then();
+
+    query.answer()
+}
+
+
 exports.askVote = async function (conInfo, reply, data, query) {
 
     let inlineKeyboard = []
@@ -52,19 +75,33 @@ exports.askVote = async function (conInfo, reply, data, query) {
 
     let text = "";
 
-    for (let i = 1; i < 6; i++ ) {
-        text += unicodeStar + " ";
+    // added only if there were previous steps
+    if (data.h != null) {
+        for (let i = 1; i < 6; i++ ) {
+            text += unicodeStar + " ";
+            inlineKeyboard.push(
+                [{ text: text, callback_data: JSON.stringify(
+                    libUtils.fromJsonToMsg({ h: data.h, c: data.c, a: 'V' + i })) },
+                ]
+            )
+        }
         inlineKeyboard.push(
-            [{ text: text, callback_data: JSON.stringify(
-                libUtils.fromJsonToMsg({ h: data.h, c: data.c, a: 'V' + i })) },
-            ]
+            [{ text: 'INDIETRO', callback_data: JSON.stringify(
+                libUtils.fromJsonToMsg({ h: data.h, c: data.c })) }]
         )
+    } 
+    // if vote done from direct research
+    else if (data.id != null) {
+        for (let i = 1; i < 6; i++ ) {
+            text += unicodeStar + " ";
+            inlineKeyboard.push(
+                [{ text: text, callback_data: JSON.stringify(
+                    libUtils.fromJsonToMsg({ id: data.id, a: 'V' + i })) },
+                ]
+            )
+        }
     }
-
-    inlineKeyboard.push(
-        [{ text: 'INDIETRO', callback_data: JSON.stringify(
-            libUtils.fromJsonToMsg({ h: data.h, c: data.c })) }]
-    )
+        
     reply.inlineKeyboard(inlineKeyboard).text('Che voto dai alla tisana?').then()
 
     query.answer()

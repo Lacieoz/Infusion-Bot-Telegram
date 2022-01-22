@@ -1,4 +1,7 @@
 const mysql = require('mysql2/promise');
+const libVote = require('./libVote'); 
+const queriesFile = require("../const/queries.js");
+const queries = queriesFile["queries"];
 
 exports.middleware = function (msg, reply, next) {
     console.info("[%s] Received %s from chat %s (%s)",
@@ -117,4 +120,39 @@ exports.calculateNewIndex = function (data, index, result) {
     }
 
     return index;
+}
+
+exports.createTextById = async function (conInfo, idTisana) {
+    let text = '';
+
+    // search data
+    let query = queries['X'].id
+    let result = await this.makeSqlCall(conInfo, query, [idTisana])
+
+    if (result.length == 0)
+        return '';
+    
+    result = result[0]
+
+    text = idTisana + " - " + result.categoria + '\n'
+    text += result.marca + " - " + result.nome + '\n'
+    
+    if (result.descrizione != '')
+        text += '\nDESCRIZIONE\n' + result.descrizione + '\n'
+    if (result.ingredienti != '')
+        text += '\nINGREDIENTI\n' + result.ingredienti + '\n'
+    if (result.isBio == 1)
+        text += '\nBIO - Sì\n'
+    else
+        text += '\nBIO - No\n'
+
+    if (result.isFreddaToo == 1)
+        text += '\nFREDDA - Può essere bevuta anche fredda\n'
+
+    let resultMeanVote = await libVote.textMean(conInfo, idTisana);
+
+    if (resultMeanVote[0].count > 0) 
+        text += "\nVOTO MEDIO - " + Number(resultMeanVote[0].mean).toFixed(2) + " (" + resultMeanVote[0].count + " voti)\n"
+
+    return text;
 }
