@@ -5,6 +5,7 @@ const libUtils = require('./libUtils');
 const libVote = require('./libVote'); 
 const queriesFile = require("../const/queries.js");
 const queries = queriesFile["queries"];
+const libCollage = require('./libCollageImages'); 
 
 const vocabularyFile = require("../const/vocabulary.js");
 const vocabulary = vocabularyFile["vocabulary"];
@@ -171,15 +172,13 @@ exports.changeTisaneGallery = async function (conInfo, reply, data, query) {
 
     // TODO : calcolo indice
 
-    
-    if (data.a != 'L')
-        index = libUtils.calculateNewIndex(data, index, result)
-    
-    else if (data.a == 'L') {
+    if (data.a == 'L' || data.h.length > 4) {
         
         await this.showListTisane(conInfo, reply, data, query, result, type)
         return
     }
+    else if (data.a != 'L')
+        index = libUtils.calculateNewIndex(data, index, result)
 
     data.h[3] = index
 
@@ -276,7 +275,7 @@ createX3inlineKeyboardEmpty = async function (data) {
     return inlineKeyboard;
 }
 
-exports.showListTisane = async function (conInfo, reply, data, query, result) {
+exports.showOldListTisane = async function (conInfo, reply, data, query, result) {
     let type = data.h[0]
     let value = data.h[1]
     let isBio = data.h[2]
@@ -313,6 +312,101 @@ exports.showListTisane = async function (conInfo, reply, data, query, result) {
 
         reply.text(text)
         reply.inlineKeyboard(inlineKeyboard).text('Lista completa per ' + vocabulary[type].articolo + ' ' + vocabulary[type].singolare + ' : ' + value).then()
+    } else {
+        reply.editText(query.message, "C'è stato un errore, riprovare").then()
+    }
+
+    query.answer()
+}
+
+exports.showListTisane = async function (conInfo, reply, data, query, result) {
+    let type = data.h[0]
+    let value = data.h[1]
+    let isBio = data.h[2]
+    let index = data.h[3]
+    let page = Number(data.h[4])
+
+    let nImagesPage = libCollage.getNImagesPage();
+
+    let maxPages = result.length % nImagesPage == 0 ? 
+            result.length / nImagesPage : 
+            Math.floor(result.length / nImagesPage) + 1;
+
+    if (page == null || isNaN(page))
+        page = 1;
+    else {
+        if (data.a == '<')
+            page = (page - 1) == 0 ? maxPages : --page;
+        else if (data.a == '>') 
+            page = (page + 1) > maxPages ? 1 : ++page;
+    }
+    
+    let text = ""
+
+    let inlineKeyboard = []
+
+    if (result.length != 0) {
+
+        
+        let rowsPage = []
+        for (let i = 0; i < result.length; i++) {
+            if (i >= (page - 1) * nImagesPage && i < page * nImagesPage) 
+                rowsPage.push(result[i]);
+        }
+
+        let paths = []
+        let ids = []
+
+        for (let row of rowsPage) {
+            ids.push(row.id);
+            paths.push("../files/foto_tisane/" + row.id + ".jpg");
+        }
+
+        // create collage image (promise)
+        let imageBufferPromise = libCollage.createCompositeImage(paths, ids);
+        
+        // to make system faster, sends immediately the image
+        let promiseSendImage = imageBufferPromise.then( async (imageBuffer) => {        
+            libUtils.writeLog("end creation collage");
+
+            imageBuffer.options = "photo.png"; // ALWAYS set the filename (not needed for file streams)
+            reply.photo(imageBuffer).then()
+            return "ended";
+        })
+
+        reply.deleteMessage(query.message);
+
+        inlineKeyboard = []
+
+        inlineKeyboard.push(
+            [
+                { text: '<', callback_data: JSON.stringify(
+                    libUtils.fromJsonToMsg({ h: [type, value, isBio, index, page], c: data.c, a: '<' })) }, //, d: idPhoto })) },
+                { text: page + " / " + maxPages, callback_data: '{prova : "prova"}' },
+                { text: '>', callback_data: JSON.stringify(
+                    libUtils.fromJsonToMsg({ h: [type, value, isBio, index, page], c: data.c, a: '>' })) } //, d: idPhoto })) }
+            ],
+            [{ text: 'RITORNA A GALLERIA TISANE', callback_data: JSON.stringify(
+                libUtils.fromJsonToMsg({ h: [type, value, isBio, index], c: data.c })) }]
+        )
+
+        text += "ID - MARCA - NOME\n"
+
+        // makes everything on the same line
+        let maxLength = result[result.length - 1].id.toString().length
+        for (let row of rowsPage) {
+            let numSpaces = maxLength - row.id.toString().length
+            text += "/" + row.id
+            text += " ".repeat(numSpaces * 2) // per 2 perchè lo "spazio" prende metà dello ... spazio , pun not intended
+            text += " - " + row.marca + " - " + row.nome + "\n"
+        }
+
+        // waits photo is sent, such that the order is respected
+        await promiseSendImage;
+        libUtils.writeLog("sent photo");
+        reply.text(text)
+        reply.inlineKeyboard(inlineKeyboard).text('Pagina ' + page + ' della lista completa per ' + vocabulary[type].articolo + ' ' + vocabulary[type].singolare + ' : ' + value).then()
+
     } else {
         reply.editText(query.message, "C'è stato un errore, riprovare").then()
     }

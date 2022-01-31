@@ -46,8 +46,8 @@ bot.callback(async function (query, next) {
 
     var data = JSON.parse(query.data);
 
-    console.log("Ricevuta callback : ")
-    console.log(data)
+    libUtils.writeLog("Ricevuta callback : ")
+    libUtils.writeLog(data)
 
     data = libUtils.fromMsgToJson(data)
 
@@ -76,7 +76,7 @@ bot.callback(async function (query, next) {
             // PASSO X.3.A
             lib.showTisaneGallery(conInfo, reply, data, query)
         }
-        else if (data.h.length == 4) { // PARAMETRO 4 : MOSTRARE DOPO LA PRIMA VOLTA
+        else if (data.h.length >= 4) { // PARAMETRO 4 : MOSTRARE DOPO LA PRIMA VOLTA
             // PASSO X.3.B
             lib.changeTisaneGallery(conInfo, reply, data, query)
         }
