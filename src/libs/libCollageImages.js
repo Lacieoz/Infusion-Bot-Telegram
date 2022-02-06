@@ -19,7 +19,7 @@ async function createTextImage(text, x, y){
     const height = width;
 
     // if there are more images, we make the text smaller
-    let fontSize = 120 - ( 10 * (nSide) )
+    let fontSize = 100 - ( 10 * (nSide) )
 
     let percSingleSide = 100 / nSide;
 
@@ -30,7 +30,7 @@ async function createTextImage(text, x, y){
     const svgImage = `
     <svg width="${width}" height="${height}">
       <style>
-      .title { fill="red"; font-size: ${fontSize}px; font-weight: bold;}
+      .title { fill="red"; font-family: "'sans serif'"; font-size: ${fontSize}px; font-weight: bold;}
       </style>
       <text x="${percX}%" y="${percY}%" text-anchor="middle" class="title" fill="red">${text}</text>
     </svg>

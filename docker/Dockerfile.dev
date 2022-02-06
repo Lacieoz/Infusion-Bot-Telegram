@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+
+FROM node:12.18.1-alpine AS BUILD_IMAGE
+
+RUN apk --no-cache add curl
+RUN apk add bash
+
+RUN curl -sfL https://install.goreleaser.com/github.com/tj/node-prune.sh | bash -s -- -b /usr/local/bin
+
+ENV NODE_ENV=development
+
+WORKDIR /app
+
+COPY ["package.json", "package-lock.json*", "./"]
+
+RUN npm install
+
+# run node prune
+RUN /usr/local/bin/node-prune
+
+COPY . .
+
+# to insert env prod file
+ADD config/.env config/.env
+
+FROM node:12.18.1-alpine
+
+WORKDIR /app
+
+COPY --from=BUILD_IMAGE /app ./
+
+# to install fonts and let sharp use them, used in collage creating
+RUN apk add --no-cache fontconfig
+RUN apk add ttf-inconsolata
+
+WORKDIR /app/src
+
+CMD [ "node", "index.js" ]
+

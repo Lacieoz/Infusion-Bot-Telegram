@@ -12,9 +12,11 @@
     "botgram": "^2.2.0",
     "dateformat": "^4.5.1",
     "dotenv": "^10.0.0",
-    "exceljs": "^4.3.0",
-    "jimp": "^0.16.1",
     "mysql2": "^2.3.0",
     "sharp": "^0.29.3"
+  },
+  "devDependencies": {
+    "exceljs": "^4.3.0",
+    "jimp": "^0.16.1"
   }
 }
